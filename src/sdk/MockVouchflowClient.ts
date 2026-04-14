@@ -323,9 +323,9 @@ export class MockVouchflowClient implements IVouchflowClient {
     return result;
   }
 
-  async requestFallback(sessionId: string): Promise<FallbackResult> {
+  async requestFallback(sessionId: string, email: string): Promise<FallbackResult> {
     const endpoint = `/v1/verify/${sessionId}/fallback`;
-    const req = { sessionId };
+    const req = { sessionId, emailHash: email.replace(/./g, '*').slice(0, 8) + '...' };
     const { startTime } = this.emitRequest('POST', endpoint, req);
     await randomDelay(400, 800);
 
@@ -339,7 +339,7 @@ export class MockVouchflowClient implements IVouchflowClient {
     const result: FallbackResult = {
       otpToken: makeOtpToken(),
       expiresInSeconds: 300,
-      channel: Math.random() > 0.5 ? 'sms' : 'email',
+      channel: 'email',
     };
 
     this.emitResponse('POST', endpoint, startTime, 200, req, result);

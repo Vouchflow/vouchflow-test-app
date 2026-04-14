@@ -46,7 +46,7 @@ export interface VerificationResult {
 export interface FallbackResult {
   otpToken: string;
   expiresInSeconds: number;
-  channel: 'sms' | 'email';
+  channel: 'email';
 }
 
 export interface OTPResult {

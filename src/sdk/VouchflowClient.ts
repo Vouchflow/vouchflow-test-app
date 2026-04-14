@@ -31,7 +31,7 @@ export interface IVouchflowClient {
 
   // Verification
   verify(sessionId: string): Promise<VerificationResult>;
-  requestFallback(sessionId: string): Promise<FallbackResult>;
+  requestFallback(sessionId: string, email: string): Promise<FallbackResult>;
   submitOTP(otpToken: string, code: string): Promise<OTPResult>;
 
   // Network graph

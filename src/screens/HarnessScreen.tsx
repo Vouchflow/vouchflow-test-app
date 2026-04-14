@@ -55,6 +55,7 @@ export function HarnessScreen() {
   // Input state
   const [userId, setUserId] = useState(DEBUG_CONFIG.defaultUserId);
   const [namespace, setNamespace] = useState(DEBUG_CONFIG.defaultNetworkNamespace);
+  const [fallbackEmail, setFallbackEmail] = useState('');
   const [otpToken, setOtpToken] = useState<string | null>(null);
   const [fallbackResult, setFallbackResult] = useState<{ otpToken: string; channel: string } | null>(null);
   const [verifyResult, setVerifyResult] = useState<{ status: string; challengeId: string } | null>(null);
@@ -148,24 +149,65 @@ export function HarnessScreen() {
 
   async function handleVerify() {
     if (!client || !activeSession) return;
-    setVerifyLoading(true);
     setVerifyResult(null);
-    try {
-      const result = await client.verify(activeSession.sessionId);
-      setVerifyResult({ status: result.status, challengeId: result.challengeId });
-    } catch (e: any) {
-      Alert.alert('Verify Failed', e.message ?? String(e));
-    } finally {
-      setVerifyLoading(false);
-    }
+
+    // Simulate the biometric prompt that the real SDK raises on device
+    Alert.alert(
+      'Biometric Challenge',
+      'Simulate device biometric authentication (Face ID / Fingerprint)',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            Alert.alert(
+              'Biometric Cancelled',
+              'User dismissed the prompt.\n\nIn production the SDK throws VouchflowError.biometricCancelled. Use Request Fallback to continue via email OTP.',
+            );
+          },
+        },
+        {
+          text: 'Fail',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Biometric Failed',
+              'Authentication rejected (wrong face/finger or lockout).\n\nIn production the SDK throws VouchflowError.biometricFailed. Use Request Fallback to continue via email OTP.',
+            );
+          },
+        },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            setVerifyLoading(true);
+            try {
+              const result = await client.verify(activeSession.sessionId);
+              setVerifyResult({ status: result.status, challengeId: result.challengeId });
+            } catch (e: any) {
+              Alert.alert('Verify Failed', e.message ?? String(e));
+            } finally {
+              setVerifyLoading(false);
+            }
+          },
+        },
+      ],
+      { cancelable: false },
+    );
   }
 
   async function handleRequestFallback() {
     if (!client || !activeSession) return;
+
+    const email = fallbackEmail.trim();
+    if (!email || !email.includes('@')) {
+      Alert.alert('Email Required', 'Enter the email address to send the OTP to before requesting fallback.');
+      return;
+    }
+
     setFallbackLoading(true);
     setFallbackResult(null);
     try {
-      const result = await client.requestFallback(activeSession.sessionId);
+      const result = await client.requestFallback(activeSession.sessionId, email);
       setFallbackResult({ otpToken: result.otpToken, channel: result.channel });
       setOtpToken(result.otpToken);
     } catch (e: any) {
@@ -424,6 +466,19 @@ export function HarnessScreen() {
 
         {/* ─── Panel 03: VERIFICATION ──────────────────────────────────────── */}
         <PanelBlock title="VERIFICATION" index={3} defaultExpanded>
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>FALLBACK EMAIL</Text>
+            <TextInput
+              style={styles.textInput}
+              value={fallbackEmail}
+              onChangeText={setFallbackEmail}
+              placeholderTextColor={colors.text.tertiary}
+              placeholder="user@example.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
+          </View>
           <View style={styles.row}>
             <ActionButton
               label="Verify"
@@ -470,7 +525,7 @@ export function HarnessScreen() {
             <OTPInput onComplete={handleSubmitOTP} />
             {otpLoading && <Text style={styles.hint}>Submitting OTP...</Text>}
             {!fallbackResult && (
-              <Text style={styles.hint}>Request fallback first to get an OTP token, then enter code.</Text>
+              <Text style={styles.hint}>Enter email above, tap Request Fallback, then enter the 6-digit code sent to that address.</Text>
             )}
           </View>
         </PanelBlock>
