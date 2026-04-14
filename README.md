@@ -110,14 +110,20 @@ Edit `src/config/debug.config.ts` or set environment variables:
 - `simulateReinstall()`: clears all in-memory state (device ID, sessions, graph opt-ins)
 - OTP validation: any non-repeating 6-digit code passes; repeated digits (e.g. 111111) fail
 
-## APK build note
+## Android APK
 
-Building the APK requires Java 17+ and the Android SDK. On this environment (Linux CI without Android SDK installed), the APK was not built. To build manually:
+A pre-built debug APK is attached to the [v0.1.0 GitHub release](https://github.com/Vouchflow/vouchflow-test-app/releases/tag/v0.1.0). Install it with:
 
 ```bash
-export ANDROID_HOME=$HOME/Android/Sdk
-export PATH=$PATH:$ANDROID_HOME/platform-tools
+adb install vouchflow-test-app-v0.1.0.apk
+```
+
+Or build from source (requires Java 17+ and Android SDK API 36):
+
+```bash
+export ANDROID_HOME=$HOME/android-sdk
 cd android && ./gradlew assembleDebug
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## Design system
