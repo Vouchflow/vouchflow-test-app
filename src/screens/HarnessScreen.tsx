@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TextInput,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,7 +31,7 @@ import type { Session, ReputationResult } from '../sdk/types';
 
 export function HarnessScreen() {
   const { entries, log, clear, copyAll } = useLogger();
-  const { client, env, setEnv } = useSDKClient(log);
+  const { client, env, setEnv, useMock, setUseMock } = useSDKClient(log);
   const { deviceInfo, refresh, setDeviceInfo } = useDeviceState();
 
   // Panel state
@@ -60,6 +61,21 @@ export function HarnessScreen() {
   const [fallbackResult, setFallbackResult] = useState<{ otpToken: string; channel: string } | null>(null);
   const [verifyResult, setVerifyResult] = useState<{ status: string; challengeId: string } | null>(null);
   const [hammerResults, setHammerResults] = useState<Array<{ attempt: number; statusCode: number }> | null>(null);
+
+  // ─── Mock toggle ──────────────────────────────────────────────────────────
+
+  function handleMockToggle(val: boolean) {
+    setUseMock(val);
+    setDeviceInfo(null);
+    setActiveSession(null);
+    setReputation(null);
+    setGraphOptedIn(false);
+    setTamperArmed(false);
+    setVerifyResult(null);
+    setFallbackResult(null);
+    setOtpToken(null);
+    setHammerResults(null);
+  }
 
   // ─── Enrollment ──────────────────────────────────────────────────────────
 
@@ -360,11 +376,17 @@ export function HarnessScreen() {
       <View style={styles.envRow}>
         <Text style={styles.envLabel}>ENVIRONMENT</Text>
         <EnvPicker current={env} onChange={setEnv} />
-        {DEBUG_CONFIG.useMockSDK && (
-          <View style={styles.mockBadge}>
-            <Text style={styles.mockBadgeText}>MOCK</Text>
-          </View>
-        )}
+        <View style={styles.mockToggleGroup}>
+          <Text style={[styles.mockToggleLabel, useMock && styles.mockToggleLabelActive]}>
+            MOCK
+          </Text>
+          <Switch
+            value={useMock}
+            onValueChange={handleMockToggle}
+            trackColor={{ false: colors.bg.border, true: colors.status.pending + '66' }}
+            thumbColor={useMock ? colors.status.pending : colors.text.tertiary}
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -696,19 +718,20 @@ const styles = StyleSheet.create({
     ...typography.sectionTitle,
     fontSize: 9,
   },
-  mockBadge: {
-    backgroundColor: colors.status.pending + '22',
-    borderWidth: 1,
-    borderColor: colors.status.pending + '44',
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+  mockToggleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginLeft: 'auto',
   },
-  mockBadgeText: {
+  mockToggleLabel: {
     ...typography.monoSmall,
-    color: colors.status.pending,
+    color: colors.text.tertiary,
     fontSize: 9,
     letterSpacing: 0.8,
+  },
+  mockToggleLabelActive: {
+    color: colors.status.pending,
   },
   scroll: {
     flex: 1,

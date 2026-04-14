@@ -17,7 +17,7 @@ export const ENVIRONMENTS = {
 
 export const DEBUG_CONFIG = {
   defaultEnv: 'local' as const,
-  useMockSDK: true,
+  useMockSDK: false,
   defaultUserId: 'test_user_001',
   defaultNetworkNamespace: 'vouchflow_internal',
   rateLimitThreshold: 10,
