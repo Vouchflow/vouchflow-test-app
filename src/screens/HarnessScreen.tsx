@@ -167,48 +167,61 @@ export function HarnessScreen() {
     if (!client || !activeSession) return;
     setVerifyResult(null);
 
-    // Simulate the biometric prompt that the real SDK raises on device
-    Alert.alert(
-      'Biometric Challenge',
-      'Simulate device biometric authentication (Face ID / Fingerprint)',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => {
-            Alert.alert(
-              'Biometric Cancelled',
-              'User dismissed the prompt.\n\nIn production the SDK throws VouchflowError.biometricCancelled. Use Request Fallback to continue via email OTP.',
-            );
+    if (useMock) {
+      // Mock mode: simulate the biometric prompt with an alert
+      Alert.alert(
+        'Biometric Challenge (Mock)',
+        'Simulate device biometric authentication',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              Alert.alert(
+                'Biometric Cancelled',
+                'User dismissed the prompt.\n\nIn production the SDK throws VouchflowError.biometricCancelled. Use Request Fallback to continue via email OTP.',
+              );
+            },
           },
-        },
-        {
-          text: 'Fail',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Biometric Failed',
-              'Authentication rejected (wrong face/finger or lockout).\n\nIn production the SDK throws VouchflowError.biometricFailed. Use Request Fallback to continue via email OTP.',
-            );
+          {
+            text: 'Fail',
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert(
+                'Biometric Failed',
+                'Authentication rejected.\n\nIn production the SDK throws VouchflowError.biometricFailed. Use Request Fallback to continue via email OTP.',
+              );
+            },
           },
-        },
-        {
-          text: 'Approve',
-          onPress: async () => {
-            setVerifyLoading(true);
-            try {
-              const result = await client.verify(activeSession.sessionId);
-              setVerifyResult({ status: result.status, challengeId: result.challengeId });
-            } catch (e: any) {
-              Alert.alert('Verify Failed', e.message ?? String(e));
-            } finally {
-              setVerifyLoading(false);
-            }
+          {
+            text: 'Approve',
+            onPress: async () => {
+              setVerifyLoading(true);
+              try {
+                const result = await client.verify(activeSession.sessionId);
+                setVerifyResult({ status: result.status, challengeId: result.challengeId });
+              } catch (e: any) {
+                Alert.alert('Verify Failed', e.message ?? String(e));
+              } finally {
+                setVerifyLoading(false);
+              }
+            },
           },
-        },
-      ],
-      { cancelable: false },
-    );
+        ],
+        { cancelable: false },
+      );
+    } else {
+      // Real SDK: call verify directly — the SDK raises the device biometric prompt natively
+      setVerifyLoading(true);
+      try {
+        const result = await client.verify(activeSession.sessionId);
+        setVerifyResult({ status: result.status, challengeId: result.challengeId });
+      } catch (e: any) {
+        Alert.alert('Verify Failed', e.message ?? String(e));
+      } finally {
+        setVerifyLoading(false);
+      }
+    }
   }
 
   async function handleRequestFallback() {
