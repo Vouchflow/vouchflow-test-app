@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { DEBUG_CONFIG, ENVIRONMENTS } from '../config/debug.config';
 import { MockVouchflowClient } from '../sdk/MockVouchflowClient';
+import { RealVouchflowClient } from '../sdk/RealVouchflowClient';
 import type { IVouchflowClient } from '../sdk/VouchflowClient';
 import type { LogEntry, EnvName } from '../sdk/types';
 
@@ -30,8 +31,7 @@ export function useSDKClient(
         onLog: (entry: LogEntry) => onLogRef.current(entry),
       }));
     } else {
-      // Real SDK integration point — swap MockVouchflowClient for your real client here
-      setClient(new MockVouchflowClient({
+      setClient(new RealVouchflowClient({
         baseUrl: envConfig.baseUrl,
         apiKey: envConfig.apiKey,
         onLog: (entry: LogEntry) => onLogRef.current(entry),

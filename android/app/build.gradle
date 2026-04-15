@@ -116,4 +116,17 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Vouchflow SDK (local AAR)
+    implementation(files('libs/vouchflow-sdk.aar'))
+
+    // Transitive dependencies required by the Vouchflow SDK
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.android.play:integrity:1.4.0")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 }
