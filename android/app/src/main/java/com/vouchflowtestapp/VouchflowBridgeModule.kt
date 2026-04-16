@@ -91,6 +91,26 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    // ── initiateSessionForFallbackTest ────────────────────────────────────────
+    // Test harness only: creates a server verify session without biometric, so
+    // requestFallback() can be tested without cancelling a biometric prompt.
+
+    @ReactMethod
+    fun initiateSessionForFallbackTest(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val sessionId = Vouchflow.shared.initiateSessionForFallbackTesting()
+                val map = Arguments.createMap().apply { putString("sessionId", sessionId) }
+                promise.resolve(map)
+            } catch (e: VouchflowError.ServerError) {
+                val msg = "[${e.statusCode}] ${e.code ?: "server_error"}: ${e.serverMessage ?: "no detail"}"
+                promise.reject("SERVER_ERROR", msg, e)
+            } catch (e: Exception) {
+                promise.reject("INIT_SESSION_ERROR", e.message ?: "Failed to initiate session", e)
+            }
+        }
+    }
+
     // ── requestFallback ───────────────────────────────────────────────────────
 
     @ReactMethod

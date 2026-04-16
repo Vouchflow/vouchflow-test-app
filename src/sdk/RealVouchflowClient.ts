@@ -162,12 +162,23 @@ export class RealVouchflowClient implements IVouchflowClient {
   async requestFallback(_sessionId: string, email: string): Promise<FallbackResult> {
     await this.ensureConfigured();
     const startTime = Date.now();
+
+    // If no active session (e.g. verify succeeded and was not cancelled), initiate one now.
+    // This lets the test harness exercise the fallback path without requiring a cancelled biometric.
+    try {
+      const init = await VouchflowBridge.initiateSessionForFallbackTest();
+      this.log({ type: 'info', direction: 'event', method: 'SDK',
+        endpoint: '/v1/verify',
+        response: { note: 'Initiated verify session for fallback test', sessionId: init.sessionId } });
+    } catch {
+      // Session may already be pending (biometric was cancelled) — proceed.
+    }
+
     this.log({ type: 'request', direction: 'out', method: 'POST',
       endpoint: '/v1/verify/{session_id}/fallback',
       request: { email: email.replace(/./g, '*').slice(0, 6) + '...' } });
 
     try {
-      // Session ID is managed internally by the SDK — pass only the email.
       const result = await VouchflowBridge.requestFallback(email);
       this.log({ type: 'response', direction: 'in', method: 'POST',
         endpoint: '/v1/verify/{session_id}/fallback',
@@ -181,7 +192,7 @@ export class RealVouchflowClient implements IVouchflowClient {
       this.log({ type: 'error', direction: 'in', method: 'POST',
         endpoint: '/v1/verify/{session_id}/fallback',
         statusCode: 500, latencyMs: Date.now() - startTime, error: `[${e.code ?? 'FALLBACK_ERROR'}] ${e.message}` });
-      const err: SDKError = { code: e.code === 'NO_ACTIVE_SESSION' ? 400 : 500, message: e.message ?? String(e) };
+      const err: SDKError = { code: 500, message: e.message ?? String(e) };
       throw err;
     }
   }
