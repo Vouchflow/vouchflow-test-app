@@ -22,8 +22,8 @@ export function useSDKClient(
 ): UseSDKClientResult {
   const [env, setEnvState] = useState<EnvName>(DEBUG_CONFIG.defaultEnv);
   const [useMock, setUseMock] = useState<boolean>(DEBUG_CONFIG.useMockSDK);
-  const [writeKey, setWriteKey] = useState<string>('');
-  const [readKey, setReadKey] = useState<string>('');
+  const [writeKey, setWriteKey] = useState<string>(ENVIRONMENTS[DEBUG_CONFIG.defaultEnv].writeKey);
+  const [readKey, setReadKey] = useState<string>(ENVIRONMENTS[DEBUG_CONFIG.defaultEnv].readKey);
   const [client, setClient] = useState<IVouchflowClient | null>(null);
   const onLogRef = useRef(onLog);
   onLogRef.current = onLog;

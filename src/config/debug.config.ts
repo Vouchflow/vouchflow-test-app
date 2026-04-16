@@ -1,12 +1,10 @@
 import { Platform } from 'react-native';
 
 export const ENVIRONMENTS = {
-  // NOTE: sandbox.api.vouchflow.dev is not yet deployed — selecting sandbox will fail DNS.
-  // This entry is kept for future use; use production for all current testing.
   sandbox: {
     baseUrl: 'https://sandbox.api.vouchflow.dev',
-    writeKey: '',
-    readKey: '',
+    writeKey: 'vsk_sandbox_9fd2cea1f3f39efafc21efbc3adec6d9584813de',
+    readKey: 'vsk_sandbox_read_87811e2ecaaaba62ff89173d104dfc2398b1e02f',
   },
   production: {
     baseUrl: 'https://api.vouchflow.dev',
@@ -16,7 +14,7 @@ export const ENVIRONMENTS = {
 } as const;
 
 export const DEBUG_CONFIG = {
-  defaultEnv: 'production' as const,
+  defaultEnv: 'sandbox' as const,
   useMockSDK: false,
   defaultUserId: 'test_user_001',
   defaultNetworkNamespace: 'vouchflow_internal',
