@@ -11,8 +11,7 @@ interface Props {
 }
 
 const ENVS: { key: EnvName; label: string }[] = [
-  { key: 'local', label: 'LOCAL' },
-  { key: 'staging', label: 'STAGING' },
+  { key: 'sandbox', label: 'SANDBOX' },
   { key: 'production', label: 'PROD' },
 ];
 

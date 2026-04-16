@@ -48,19 +48,37 @@ export class RealVouchflowClient implements IVouchflowClient {
 
   private async ensureConfigured(): Promise<void> {
     if (this.configured) return;
-    const env = this.config.baseUrl.includes('sandbox') ? 'sandbox' : 'production';
-    await VouchflowBridge.configure(this.config.apiKey, this.config.customerId, env);
+
+    const { writeKey, customerId, baseUrl } = this.config;
+
+    if (!writeKey || !writeKey.startsWith('vsk_')) {
+      const err: SDKError = {
+        code: 400,
+        message: 'Write key is required and must start with "vsk_". Enter it in the API CONFIG section.',
+      };
+      throw err;
+    }
+    if (!customerId) {
+      const err: SDKError = {
+        code: 400,
+        message: 'Customer ID is required (e.g. cust_abc123). Find it in the Vouchflow web dashboard.',
+      };
+      throw err;
+    }
+
+    const env = baseUrl.includes('sandbox') ? 'sandbox' : 'production';
+    await VouchflowBridge.configure(writeKey, customerId, env);
     this.configured = true;
   }
 
   // ── Enrollment ──────────────────────────────────────────────────────────────
-  // Enrollment is automatic on the first verify() call. This just configures
-  // the SDK and returns synthetic device info.
+  // Enrollment is automatic on the first verify() call in the real SDK.
+  // This returns synthetic device info without triggering configure, so the
+  // user can see device state before entering API credentials.
 
   async enroll(): Promise<DeviceInfo> {
     this.log({ type: 'info', direction: 'event', method: 'SDK', endpoint: '/internal/configure',
       response: { note: 'Real SDK: enrollment is automatic on first verify()' } });
-    await this.ensureConfigured();
     return {
       deviceId: 'real_device',
       platform: 'android',
@@ -85,7 +103,6 @@ export class RealVouchflowClient implements IVouchflowClient {
   // Session lifecycle is managed internally by the SDK's VerificationManager.
 
   async createSession(userId: string): Promise<Session> {
-    await this.ensureConfigured();
     const sessionId = 'real_ses_' + Math.random().toString(36).slice(2);
     this.lastSessionId = sessionId;
     this.log({ type: 'info', direction: 'event', method: 'SDK', endpoint: '/internal/session',

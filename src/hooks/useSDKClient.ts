@@ -11,8 +11,10 @@ export interface UseSDKClientResult {
   setEnv: (env: EnvName) => void;
   useMock: boolean;
   setUseMock: (val: boolean) => void;
-  apiKey: string;
-  setApiKey: (key: string) => void;
+  writeKey: string;
+  setWriteKey: (key: string) => void;
+  readKey: string;
+  setReadKey: (key: string) => void;
   customerId: string;
   setCustomerId: (id: string) => void;
 }
@@ -22,36 +24,35 @@ export function useSDKClient(
 ): UseSDKClientResult {
   const [env, setEnvState] = useState<EnvName>(DEBUG_CONFIG.defaultEnv);
   const [useMock, setUseMock] = useState<boolean>(DEBUG_CONFIG.useMockSDK);
-  const [apiKey, setApiKey] = useState<string>(ENVIRONMENTS[DEBUG_CONFIG.defaultEnv].apiKey);
+  const [writeKey, setWriteKey] = useState<string>('');
+  const [readKey, setReadKey] = useState<string>('');
   const [customerId, setCustomerId] = useState<string>('');
   const [client, setClient] = useState<IVouchflowClient | null>(null);
   const onLogRef = useRef(onLog);
   onLogRef.current = onLog;
 
-  // When env changes, reset apiKey to the new env's default
+  // When env changes, reset keys to the new env's defaults (empty by design)
   function setEnv(newEnv: EnvName) {
     setEnvState(newEnv);
-    setApiKey(ENVIRONMENTS[newEnv].apiKey);
+    setWriteKey(ENVIRONMENTS[newEnv].writeKey);
+    setReadKey(ENVIRONMENTS[newEnv].readKey);
   }
 
   useEffect(() => {
     const envConfig = ENVIRONMENTS[env];
+    const cfg = {
+      baseUrl: envConfig.baseUrl,
+      writeKey,
+      readKey,
+      customerId,
+      onLog: (entry: LogEntry) => onLogRef.current(entry),
+    };
     if (useMock) {
-      setClient(new MockVouchflowClient({
-        baseUrl: envConfig.baseUrl,
-        apiKey,
-        customerId,
-        onLog: (entry: LogEntry) => onLogRef.current(entry),
-      }));
+      setClient(new MockVouchflowClient(cfg));
     } else {
-      setClient(new RealVouchflowClient({
-        baseUrl: envConfig.baseUrl,
-        apiKey,
-        customerId,
-        onLog: (entry: LogEntry) => onLogRef.current(entry),
-      }));
+      setClient(new RealVouchflowClient(cfg));
     }
-  }, [env, useMock, apiKey, customerId]);
+  }, [env, useMock, writeKey, readKey, customerId]);
 
-  return { client, env, setEnv, useMock, setUseMock, apiKey, setApiKey, customerId, setCustomerId };
+  return { client, env, setEnv, useMock, setUseMock, writeKey, setWriteKey, readKey, setReadKey, customerId, setCustomerId };
 }

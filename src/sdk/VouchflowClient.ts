@@ -13,7 +13,11 @@ import type {
 
 export interface VouchflowClientConfig {
   baseUrl: string;
-  apiKey: string;
+  /** Write-scoped key (starts with vsk_live_ or vsk_test_). Passed to the native SDK configure(). */
+  writeKey: string;
+  /** Read-scoped key. Used for server-side reputation queries. */
+  readKey: string;
+  /** Your Vouchflow customer ID, e.g. cust_abc123. Shown in the web dashboard. */
   customerId: string;
   onLog?: (entry: LogEntry) => void;
 }

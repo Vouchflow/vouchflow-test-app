@@ -31,7 +31,7 @@ import type { Session, ReputationResult } from '../sdk/types';
 
 export function HarnessScreen() {
   const { entries, log, clear, copyAll } = useLogger();
-  const { client, env, setEnv, useMock, setUseMock, apiKey, setApiKey, customerId, setCustomerId } = useSDKClient(log);
+  const { client, env, setEnv, useMock, setUseMock, writeKey, setWriteKey, readKey, setReadKey, customerId, setCustomerId } = useSDKClient(log);
   const { deviceInfo, refresh, setDeviceInfo } = useDeviceState();
 
   // Panel state
@@ -406,16 +406,27 @@ export function HarnessScreen() {
       {!useMock && (
         <View style={styles.apiConfigRow}>
           <View style={styles.apiConfigField}>
-            <Text style={styles.apiConfigLabel}>API KEY</Text>
+            <Text style={styles.apiConfigLabel}>WRITE KEY</Text>
             <TextInput
               style={styles.apiConfigInput}
-              value={apiKey}
-              onChangeText={setApiKey}
-              placeholder="vf_live_…"
+              value={writeKey}
+              onChangeText={setWriteKey}
+              placeholder="vsk_live_…"
               placeholderTextColor={colors.text.tertiary}
               autoCapitalize="none"
               autoCorrect={false}
-              secureTextEntry={false}
+            />
+          </View>
+          <View style={styles.apiConfigField}>
+            <Text style={styles.apiConfigLabel}>READ KEY</Text>
+            <TextInput
+              style={styles.apiConfigInput}
+              value={readKey}
+              onChangeText={setReadKey}
+              placeholder="vsk_read_…"
+              placeholderTextColor={colors.text.tertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
           <View style={styles.apiConfigField}>

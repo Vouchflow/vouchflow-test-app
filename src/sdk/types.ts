@@ -1,6 +1,6 @@
 // ─── Core enums ────────────────────────────────────────────────────────────
 
-export type EnvName = 'local' | 'staging' | 'production';
+export type EnvName = 'sandbox' | 'production';
 
 export type SessionStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PENDING';
 

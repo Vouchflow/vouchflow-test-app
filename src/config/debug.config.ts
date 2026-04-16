@@ -1,22 +1,20 @@
 import { Platform } from 'react-native';
 
 export const ENVIRONMENTS = {
-  local: {
-    baseUrl: 'http://localhost:3000',
-    apiKey: 'debug_local_key',
-  },
-  staging: {
-    baseUrl: 'https://api-staging.vouchflow.io',
-    apiKey: process.env.VOUCHFLOW_STAGING_KEY ?? 'REPLACE_ME',
+  sandbox: {
+    baseUrl: 'https://sandbox.api.vouchflow.dev',
+    writeKey: '',
+    readKey: '',
   },
   production: {
-    baseUrl: 'https://api.vouchflow.io',
-    apiKey: process.env.VOUCHFLOW_PROD_KEY ?? '',
+    baseUrl: 'https://api.vouchflow.dev',
+    writeKey: '',
+    readKey: '',
   },
 } as const;
 
 export const DEBUG_CONFIG = {
-  defaultEnv: 'local' as const,
+  defaultEnv: 'sandbox' as const,
   useMockSDK: false,
   defaultUserId: 'test_user_001',
   defaultNetworkNamespace: 'vouchflow_internal',
