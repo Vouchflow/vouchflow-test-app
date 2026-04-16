@@ -87,3 +87,4 @@ yarn-error.log
 # Android build outputs
 android/app/build/
 android/build/
+vouchflow-test-app-v0.1.0.apk
