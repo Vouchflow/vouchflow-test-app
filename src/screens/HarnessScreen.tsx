@@ -31,7 +31,7 @@ import type { Session, ReputationResult } from '../sdk/types';
 
 export function HarnessScreen() {
   const { entries, log, clear, copyAll } = useLogger();
-  const { client, env, setEnv, useMock, setUseMock, writeKey, setWriteKey, readKey, setReadKey, customerId, setCustomerId } = useSDKClient(log);
+  const { client, env, setEnv, useMock, setUseMock, writeKey, setWriteKey, readKey, setReadKey } = useSDKClient(log);
   const { deviceInfo, refresh, setDeviceInfo } = useDeviceState();
 
   // Panel state
@@ -424,18 +424,6 @@ export function HarnessScreen() {
               value={readKey}
               onChangeText={setReadKey}
               placeholder="vsk_read_…"
-              placeholderTextColor={colors.text.tertiary}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <View style={styles.apiConfigField}>
-            <Text style={styles.apiConfigLabel}>CUSTOMER ID</Text>
-            <TextInput
-              style={styles.apiConfigInput}
-              value={customerId}
-              onChangeText={setCustomerId}
-              placeholder="cust_…"
               placeholderTextColor={colors.text.tertiary}
               autoCapitalize="none"
               autoCorrect={false}

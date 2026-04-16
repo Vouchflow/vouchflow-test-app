@@ -15,11 +15,11 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
     // ── configure ─────────────────────────────────────────────────────────────
 
     @ReactMethod
-    fun configure(apiKey: String, customerId: String, environment: String, promise: Promise) {
+    fun configure(apiKey: String, environment: String, promise: Promise) {
         try {
             val env = if (environment == "sandbox") VouchflowEnvironment.SANDBOX
                       else VouchflowEnvironment.PRODUCTION
-            Vouchflow.configure(VouchflowConfig(apiKey = apiKey, customerId = customerId, environment = env))
+            Vouchflow.configure(VouchflowConfig(apiKey = apiKey, environment = env))
             promise.resolve(null)
         } catch (e: Exception) {
             promise.reject("CONFIG_ERROR", e.message ?: "Configure failed", e)

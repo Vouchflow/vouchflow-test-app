@@ -49,7 +49,7 @@ export class RealVouchflowClient implements IVouchflowClient {
   private async ensureConfigured(): Promise<void> {
     if (this.configured) return;
 
-    const { writeKey, customerId, baseUrl } = this.config;
+    const { writeKey, baseUrl } = this.config;
 
     if (!writeKey || !writeKey.startsWith('vsk_')) {
       const err: SDKError = {
@@ -58,16 +58,9 @@ export class RealVouchflowClient implements IVouchflowClient {
       };
       throw err;
     }
-    if (!customerId) {
-      const err: SDKError = {
-        code: 400,
-        message: 'Customer ID is required (e.g. cust_abc123). Find it in the Vouchflow web dashboard.',
-      };
-      throw err;
-    }
 
     const env = baseUrl.includes('sandbox') ? 'sandbox' : 'production';
-    await VouchflowBridge.configure(writeKey, customerId, env);
+    await VouchflowBridge.configure(writeKey, env);
     this.configured = true;
   }
 

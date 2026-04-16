@@ -15,8 +15,6 @@ export interface UseSDKClientResult {
   setWriteKey: (key: string) => void;
   readKey: string;
   setReadKey: (key: string) => void;
-  customerId: string;
-  setCustomerId: (id: string) => void;
 }
 
 export function useSDKClient(
@@ -26,12 +24,10 @@ export function useSDKClient(
   const [useMock, setUseMock] = useState<boolean>(DEBUG_CONFIG.useMockSDK);
   const [writeKey, setWriteKey] = useState<string>('');
   const [readKey, setReadKey] = useState<string>('');
-  const [customerId, setCustomerId] = useState<string>('');
   const [client, setClient] = useState<IVouchflowClient | null>(null);
   const onLogRef = useRef(onLog);
   onLogRef.current = onLog;
 
-  // When env changes, reset keys to the new env's defaults (empty by design)
   function setEnv(newEnv: EnvName) {
     setEnvState(newEnv);
     setWriteKey(ENVIRONMENTS[newEnv].writeKey);
@@ -44,7 +40,6 @@ export function useSDKClient(
       baseUrl: envConfig.baseUrl,
       writeKey,
       readKey,
-      customerId,
       onLog: (entry: LogEntry) => onLogRef.current(entry),
     };
     if (useMock) {
@@ -52,7 +47,7 @@ export function useSDKClient(
     } else {
       setClient(new RealVouchflowClient(cfg));
     }
-  }, [env, useMock, writeKey, readKey, customerId]);
+  }, [env, useMock, writeKey, readKey]);
 
-  return { client, env, setEnv, useMock, setUseMock, writeKey, setWriteKey, readKey, setReadKey, customerId, setCustomerId };
+  return { client, env, setEnv, useMock, setUseMock, writeKey, setWriteKey, readKey, setReadKey };
 }

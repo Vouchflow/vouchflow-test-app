@@ -17,8 +17,6 @@ export interface VouchflowClientConfig {
   writeKey: string;
   /** Read-scoped key. Used for server-side reputation queries. */
   readKey: string;
-  /** Your Vouchflow customer ID, e.g. cust_abc123. Shown in the web dashboard. */
-  customerId: string;
   onLog?: (entry: LogEntry) => void;
 }
 
