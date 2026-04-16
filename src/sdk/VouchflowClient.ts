@@ -14,6 +14,7 @@ import type {
 export interface VouchflowClientConfig {
   baseUrl: string;
   apiKey: string;
+  customerId: string;
   onLog?: (entry: LogEntry) => void;
 }
 

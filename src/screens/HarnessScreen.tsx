@@ -31,7 +31,7 @@ import type { Session, ReputationResult } from '../sdk/types';
 
 export function HarnessScreen() {
   const { entries, log, clear, copyAll } = useLogger();
-  const { client, env, setEnv, useMock, setUseMock } = useSDKClient(log);
+  const { client, env, setEnv, useMock, setUseMock, apiKey, setApiKey, customerId, setCustomerId } = useSDKClient(log);
   const { deviceInfo, refresh, setDeviceInfo } = useDeviceState();
 
   // Panel state
@@ -402,6 +402,37 @@ export function HarnessScreen() {
         </View>
       </View>
 
+      {/* API config — only shown in real SDK mode */}
+      {!useMock && (
+        <View style={styles.apiConfigRow}>
+          <View style={styles.apiConfigField}>
+            <Text style={styles.apiConfigLabel}>API KEY</Text>
+            <TextInput
+              style={styles.apiConfigInput}
+              value={apiKey}
+              onChangeText={setApiKey}
+              placeholder="vf_live_…"
+              placeholderTextColor={colors.text.tertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry={false}
+            />
+          </View>
+          <View style={styles.apiConfigField}>
+            <Text style={styles.apiConfigLabel}>CUSTOMER ID</Text>
+            <TextInput
+              style={styles.apiConfigInput}
+              value={customerId}
+              onChangeText={setCustomerId}
+              placeholder="cust_…"
+              placeholderTextColor={colors.text.tertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        </View>
+      )}
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
 
         {/* ─── Panel 01: ENROLLMENT ─────────────────────────────────────────── */}
@@ -745,6 +776,34 @@ const styles = StyleSheet.create({
   },
   mockToggleLabelActive: {
     color: colors.status.pending,
+  },
+  apiConfigRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bg.border,
+    backgroundColor: colors.bg.raised,
+  },
+  apiConfigField: {
+    flex: 1,
+    gap: 3,
+  },
+  apiConfigLabel: {
+    ...typography.sectionTitle,
+    fontSize: 8,
+  },
+  apiConfigInput: {
+    backgroundColor: colors.bg.base,
+    borderWidth: 1,
+    borderColor: colors.bg.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    ...typography.mono,
+    color: colors.text.primary,
+    fontSize: 11,
   },
   scroll: {
     flex: 1,

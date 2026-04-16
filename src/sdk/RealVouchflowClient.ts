@@ -49,7 +49,7 @@ export class RealVouchflowClient implements IVouchflowClient {
   private async ensureConfigured(): Promise<void> {
     if (this.configured) return;
     const env = this.config.baseUrl.includes('sandbox') ? 'sandbox' : 'production';
-    await VouchflowBridge.configure(this.config.apiKey, 'cust_real', env);
+    await VouchflowBridge.configure(this.config.apiKey, this.config.customerId, env);
     this.configured = true;
   }
 
