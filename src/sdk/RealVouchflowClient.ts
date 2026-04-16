@@ -88,8 +88,14 @@ export class RealVouchflowClient implements IVouchflowClient {
   async wipeAndReset(): Promise<void> {
     this.configured = false;
     this.lastSessionId = null;
-    this.log({ type: 'warn', direction: 'event', method: 'SDK', endpoint: '/internal/wipe',
-      error: 'Real SDK: wipe clears local state only. AccountManager data persists on device.' });
+    try {
+      await VouchflowBridge.reset();
+      this.log({ type: 'warn', direction: 'event', method: 'SDK', endpoint: '/internal/wipe',
+        response: { note: 'Real SDK: Keystore key and AccountManager tokens cleared.' } });
+    } catch (e: any) {
+      this.log({ type: 'error', direction: 'event', method: 'SDK', endpoint: '/internal/wipe',
+        error: `Native reset failed: ${e.message ?? String(e)}` });
+    }
   }
 
   // ── Sessions ────────────────────────────────────────────────────────────────

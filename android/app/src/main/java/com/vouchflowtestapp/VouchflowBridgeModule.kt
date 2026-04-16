@@ -28,6 +28,18 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    // ── reset ─────────────────────────────────────────────────────────────────
+
+    @ReactMethod
+    fun reset(promise: Promise) {
+        try {
+            Vouchflow.reset()
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("RESET_ERROR", e.message ?: "Reset failed", e)
+        }
+    }
+
     // ── verify ────────────────────────────────────────────────────────────────
 
     @ReactMethod
@@ -58,7 +70,13 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
             } catch (e: VouchflowError.BiometricUnavailable) {
                 promise.reject("BIOMETRIC_UNAVAILABLE", "No biometrics enrolled on this device", e)
             } catch (e: VouchflowError.EnrollmentFailed) {
-                val msg = e.enrollmentCause?.message ?: "Device enrollment failed"
+                // enrollmentCause may be a ServerError whose .message is null; format it explicitly.
+                val cause = e.enrollmentCause
+                val msg = when (cause) {
+                    is VouchflowError.ServerError ->
+                        "[${cause.statusCode}] ${cause.code ?: "server_error"}: ${cause.serverMessage ?: "no detail"}"
+                    else -> cause?.message ?: "Device enrollment failed"
+                }
                 promise.reject("ENROLLMENT_FAILED", msg, e)
             } catch (e: VouchflowError.ServerError) {
                 val msg = "[${e.statusCode}] ${e.code ?: "server_error"}: ${e.serverMessage ?: "no detail"}"

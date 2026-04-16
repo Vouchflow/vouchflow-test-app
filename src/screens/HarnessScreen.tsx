@@ -100,6 +100,15 @@ export function HarnessScreen() {
 
   async function handleEnroll() {
     if (!client) return;
+    // In real SDK mode enrollment is automatic on the first verify() call.
+    // The Enroll button is only meaningful in mock mode.
+    if (!useMock) {
+      Alert.alert(
+        'Enrollment is Automatic',
+        'In real SDK mode, the device is enrolled automatically when you tap Verify. You do not need to enroll manually.',
+      );
+      return;
+    }
     setEnrollLoading(true);
     try {
       const info = await client.enroll();
@@ -156,6 +165,15 @@ export function HarnessScreen() {
 
   async function handleCreateSession() {
     if (!client) return;
+    // In real SDK mode, the session is managed internally by verify(). Creating one
+    // here just sets a synthetic placeholder so the Verify button becomes enabled.
+    if (!useMock) {
+      Alert.alert(
+        'Sessions are Internal',
+        'In real SDK mode the session is created internally by the SDK during Verify. Tap Verify directly — no need to create a session manually.',
+      );
+      return;
+    }
     setCreateSessionLoading(true);
     try {
       const session = await client.createSession(userId.trim() || DEBUG_CONFIG.defaultUserId);
@@ -183,8 +201,23 @@ export function HarnessScreen() {
   // ─── Verification ─────────────────────────────────────────────────────────
 
   async function handleVerify() {
-    if (!client || !activeSession) return;
+    if (!client) return;
     setVerifyResult(null);
+
+    // In real SDK mode the native SDK manages sessions internally. If there is no synthetic
+    // placeholder session yet, create one now so the rest of the flow (fallback, etc.) has
+    // a session ID to reference — the native SDK ignores it and uses its own.
+    let session = activeSession;
+    if (!useMock && !session) {
+      try {
+        session = await client.createSession(userId.trim() || DEBUG_CONFIG.defaultUserId);
+        setActiveSession(session);
+      } catch {
+        // continue — verify() doesn't actually use the session ID in real mode
+      }
+    }
+
+    if (!session && useMock) return; // mock mode still requires a session
 
     if (useMock) {
       // Mock mode: simulate the biometric prompt with an alert
@@ -217,7 +250,7 @@ export function HarnessScreen() {
             onPress: async () => {
               setVerifyLoading(true);
               try {
-                const result = await client.verify(activeSession.sessionId);
+                const result = await client.verify(session!.sessionId);
                 setVerifyResult({ status: result.status, challengeId: result.challengeId });
               } catch (e: any) {
                 errorAlert('Verify Failed', e);
@@ -233,7 +266,7 @@ export function HarnessScreen() {
       // Real SDK: call verify directly — the SDK raises the device biometric prompt natively
       setVerifyLoading(true);
       try {
-        const result = await client.verify(activeSession.sessionId);
+        const result = await client.verify(session?.sessionId ?? '');
         setVerifyResult({ status: result.status, challengeId: result.challengeId });
       } catch (e: any) {
         errorAlert('Verify Failed', e);
@@ -244,7 +277,7 @@ export function HarnessScreen() {
   }
 
   async function handleRequestFallback() {
-    if (!client || !activeSession) return;
+    if (!client) return;
 
     const email = fallbackEmail.trim();
     if (!email || !email.includes('@')) {
@@ -570,7 +603,7 @@ export function HarnessScreen() {
               loading={verifyLoading}
               variant="primary"
               size="sm"
-              disabled={!activeSession || activeSession.status !== 'ACTIVE'}
+              disabled={useMock && (!activeSession || activeSession.status !== 'ACTIVE')}
             />
             <ActionButton
               label="Request Fallback"
@@ -578,11 +611,11 @@ export function HarnessScreen() {
               loading={fallbackLoading}
               variant="secondary"
               size="sm"
-              disabled={!activeSession}
+              disabled={useMock && !activeSession}
             />
           </View>
 
-          {!activeSession && (
+          {useMock && !activeSession && (
             <Text style={styles.hint}>Create a session first.</Text>
           )}
 
