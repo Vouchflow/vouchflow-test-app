@@ -94,11 +94,10 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
     // ── requestFallback ───────────────────────────────────────────────────────
 
     @ReactMethod
-    fun requestFallback(sessionId: String, email: String, promise: Promise) {
+    fun requestFallback(email: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = Vouchflow.shared.requestFallback(
-                    sessionId = sessionId,
                     email = email,
                     reason = FallbackReason.BIOMETRIC_FAILED
                 )
@@ -107,6 +106,8 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
                     putString("expiresAt", result.expiresAt.toString())
                 }
                 promise.resolve(map)
+            } catch (e: VouchflowError.NoActiveSession) {
+                promise.reject("NO_ACTIVE_SESSION", "No active verification session — call verify() first", e)
             } catch (e: VouchflowError.ServerError) {
                 val msg = "[${e.statusCode}] ${e.code ?: "server_error"}: ${e.serverMessage ?: "no detail"}"
                 promise.reject("SERVER_ERROR", msg, e)

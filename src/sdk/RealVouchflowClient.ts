@@ -31,7 +31,6 @@ function isoNow(): string {
  */
 export class RealVouchflowClient implements IVouchflowClient {
   private config: VouchflowClientConfig;
-  private lastSessionId: string | null = null;
   private configured = false;
 
   constructor(config: VouchflowClientConfig) {
@@ -87,7 +86,6 @@ export class RealVouchflowClient implements IVouchflowClient {
 
   async wipeAndReset(): Promise<void> {
     this.configured = false;
-    this.lastSessionId = null;
     try {
       await VouchflowBridge.reset();
       this.log({ type: 'warn', direction: 'event', method: 'SDK', endpoint: '/internal/wipe',
@@ -139,7 +137,6 @@ export class RealVouchflowClient implements IVouchflowClient {
     try {
       const result = await VouchflowBridge.verify();
       const latencyMs = Date.now() - startTime;
-      this.lastSessionId = result.sessionId ?? _sessionId;
       this.log({ type: 'response', direction: 'in', method: 'POST', endpoint: '/v1/verify/complete',
         statusCode: 200, latencyMs, response: result });
       return {
@@ -152,17 +149,9 @@ export class RealVouchflowClient implements IVouchflowClient {
     } catch (e: any) {
       const nativeCode: string = e.code ?? 'VERIFY_ERROR';
       const latencyMs = Date.now() - startTime;
-
-      // BiometricCancelled / BiometricFailed carry the real server session ID in userInfo.
-      // Store it so requestFallback() can use it instead of the synthetic session ID.
-      if (e.userInfo?.sessionId) {
-        this.lastSessionId = e.userInfo.sessionId;
-      }
-
       this.log({ type: 'error', direction: 'in', method: 'POST', endpoint: '/v1/verify',
         statusCode: (nativeCode === 'BIOMETRIC_CANCELLED' || nativeCode === 'BIOMETRIC_FAILED') ? 401 : 500,
-        latencyMs, error: `[${nativeCode}] ${e.message}${e.userInfo?.sessionId ? ` sessionId=${e.userInfo.sessionId}` : ''}` });
-
+        latencyMs, error: `[${nativeCode}] ${e.message}` });
       const err: SDKError = { code: nativeCode === 'BIOMETRIC_CANCELLED' ? 401 : 500, message: `[${nativeCode}] ${e.message ?? String(e)}` };
       throw err;
     }
@@ -170,20 +159,18 @@ export class RealVouchflowClient implements IVouchflowClient {
 
   // ── Fallback ────────────────────────────────────────────────────────────────
 
-  async requestFallback(sessionId: string, email: string): Promise<FallbackResult> {
+  async requestFallback(_sessionId: string, email: string): Promise<FallbackResult> {
     await this.ensureConfigured();
     const startTime = Date.now();
-    // Use the real session ID captured from the last biometric error, not the synthetic one
-    // created by createSession(). BiometricCancelled/BiometricFailed carry the server session ID.
-    const realSessionId = this.lastSessionId ?? sessionId;
     this.log({ type: 'request', direction: 'out', method: 'POST',
-      endpoint: `/v1/verify/${realSessionId}/fallback`,
-      request: { email: email.replace(/./g, '*').slice(0, 6) + '...', usingSessionId: realSessionId } });
+      endpoint: '/v1/verify/{session_id}/fallback',
+      request: { email: email.replace(/./g, '*').slice(0, 6) + '...' } });
 
     try {
-      const result = await VouchflowBridge.requestFallback(realSessionId, email);
+      // Session ID is managed internally by the SDK — pass only the email.
+      const result = await VouchflowBridge.requestFallback(email);
       this.log({ type: 'response', direction: 'in', method: 'POST',
-        endpoint: `/v1/verify/${realSessionId}/fallback`,
+        endpoint: '/v1/verify/{session_id}/fallback',
         statusCode: 200, latencyMs: Date.now() - startTime, response: { expiresAt: result.expiresAt } });
       return {
         otpToken: result.fallbackSessionId,
@@ -192,9 +179,9 @@ export class RealVouchflowClient implements IVouchflowClient {
       };
     } catch (e: any) {
       this.log({ type: 'error', direction: 'in', method: 'POST',
-        endpoint: `/v1/verify/${realSessionId}/fallback`,
+        endpoint: '/v1/verify/{session_id}/fallback',
         statusCode: 500, latencyMs: Date.now() - startTime, error: `[${e.code ?? 'FALLBACK_ERROR'}] ${e.message}` });
-      const err: SDKError = { code: 500, message: e.message ?? String(e) };
+      const err: SDKError = { code: e.code === 'NO_ACTIVE_SESSION' ? 400 : 500, message: e.message ?? String(e) };
       throw err;
     }
   }
