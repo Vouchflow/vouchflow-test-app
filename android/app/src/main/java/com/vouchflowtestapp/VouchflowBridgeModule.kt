@@ -21,6 +21,8 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
                       else VouchflowEnvironment.PRODUCTION
             Vouchflow.configure(VouchflowConfig(apiKey = apiKey, environment = env))
             promise.resolve(null)
+        } catch (e: VouchflowError.InvalidApiKey) {
+            promise.reject("INVALID_API_KEY", "API key must start with 'vsk_'.", e)
         } catch (e: Exception) {
             promise.reject("CONFIG_ERROR", e.message ?: "Configure failed", e)
         }
@@ -47,13 +49,24 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
                 }
                 promise.resolve(map)
             } catch (e: VouchflowError.BiometricCancelled) {
-                promise.reject("BIOMETRIC_CANCELLED", "User cancelled biometric prompt", e)
+                // sessionId is needed by requestFallback — pass it in userInfo
+                val userInfo = Arguments.createMap().apply { putString("sessionId", e.sessionId) }
+                promise.reject("BIOMETRIC_CANCELLED", "User cancelled biometric prompt", e, userInfo)
             } catch (e: VouchflowError.BiometricFailed) {
-                promise.reject("BIOMETRIC_FAILED", "Biometric authentication failed", e)
+                val userInfo = Arguments.createMap().apply { putString("sessionId", e.sessionId) }
+                promise.reject("BIOMETRIC_FAILED", "Biometric authentication failed", e, userInfo)
             } catch (e: VouchflowError.BiometricUnavailable) {
-                promise.reject("BIOMETRIC_UNAVAILABLE", "Biometric not available on this device", e)
+                promise.reject("BIOMETRIC_UNAVAILABLE", "No biometrics enrolled on this device", e)
             } catch (e: VouchflowError.EnrollmentFailed) {
-                promise.reject("ENROLLMENT_FAILED", "Device enrollment failed", e)
+                val msg = e.enrollmentCause?.message ?: "Device enrollment failed"
+                promise.reject("ENROLLMENT_FAILED", msg, e)
+            } catch (e: VouchflowError.ServerError) {
+                val msg = "[${e.statusCode}] ${e.code ?: "server_error"}: ${e.serverMessage ?: "no detail"}"
+                promise.reject("SERVER_ERROR", msg, e)
+            } catch (e: VouchflowError.NetworkUnavailable) {
+                promise.reject("NETWORK_UNAVAILABLE", "No network connection", e)
+            } catch (e: VouchflowError.PinningFailure) {
+                promise.reject("PINNING_FAILURE", "TLS certificate pinning failed", e)
             } catch (e: Exception) {
                 promise.reject("VERIFY_ERROR", e.message ?: "Verification failed", e)
             }
@@ -76,6 +89,9 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
                     putString("expiresAt", result.expiresAt.toString())
                 }
                 promise.resolve(map)
+            } catch (e: VouchflowError.ServerError) {
+                val msg = "[${e.statusCode}] ${e.code ?: "server_error"}: ${e.serverMessage ?: "no detail"}"
+                promise.reject("SERVER_ERROR", msg, e)
             } catch (e: Exception) {
                 promise.reject("FALLBACK_ERROR", e.message ?: "Fallback request failed", e)
             }
@@ -94,6 +110,9 @@ class VouchflowBridgeModule(reactContext: ReactApplicationContext) :
                     putString("confidence", result.confidence.name.lowercase())
                 }
                 promise.resolve(map)
+            } catch (e: VouchflowError.ServerError) {
+                val msg = "[${e.statusCode}] ${e.code ?: "server_error"}: ${e.serverMessage ?: "no detail"}"
+                promise.reject("SERVER_ERROR", msg, e)
             } catch (e: Exception) {
                 promise.reject("OTP_ERROR", e.message ?: "OTP submission failed", e)
             }

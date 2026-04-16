@@ -62,6 +62,25 @@ export function HarnessScreen() {
   const [verifyResult, setVerifyResult] = useState<{ status: string; challengeId: string } | null>(null);
   const [hammerResults, setHammerResults] = useState<Array<{ attempt: number; statusCode: number }> | null>(null);
 
+  // ─── Error helper ─────────────────────────────────────────────────────────
+  // In real SDK mode, append the last few log entries to error alerts so
+  // failures are self-contained and debuggable without checking the log panel.
+
+  function errorAlert(title: string, e: any) {
+    const base = `${e.code ? `[${e.code}] ` : ''}${e.message ?? String(e)}`;
+    if (useMock || entries.length === 0) {
+      Alert.alert(title, base);
+      return;
+    }
+    const tail = entries.slice(-6).map(entry => {
+      const t = new Date(entry.timestamp).toISOString().slice(11, 23);
+      const status = entry.statusCode ? ` ${entry.statusCode}` : '';
+      const detail = entry.error ?? (entry.response ? JSON.stringify(entry.response).slice(0, 80) : '');
+      return `${t} ${entry.type.toUpperCase()}${status} ${entry.endpoint}${detail ? '\n  ' + detail : ''}`;
+    }).join('\n');
+    Alert.alert(title, `${base}\n\n── LOG (last 6) ──\n${tail}`);
+  }
+
   // ─── Mock toggle ──────────────────────────────────────────────────────────
 
   function handleMockToggle(val: boolean) {
@@ -86,7 +105,7 @@ export function HarnessScreen() {
       const info = await client.enroll();
       setDeviceInfo(info);
     } catch (e: any) {
-      Alert.alert('Enroll Failed', e.message ?? String(e));
+      errorAlert('Enroll Failed', e);
     } finally {
       setEnrollLoading(false);
     }
@@ -201,7 +220,7 @@ export function HarnessScreen() {
                 const result = await client.verify(activeSession.sessionId);
                 setVerifyResult({ status: result.status, challengeId: result.challengeId });
               } catch (e: any) {
-                Alert.alert('Verify Failed', e.message ?? String(e));
+                errorAlert('Verify Failed', e);
               } finally {
                 setVerifyLoading(false);
               }
@@ -217,7 +236,7 @@ export function HarnessScreen() {
         const result = await client.verify(activeSession.sessionId);
         setVerifyResult({ status: result.status, challengeId: result.challengeId });
       } catch (e: any) {
-        Alert.alert('Verify Failed', e.message ?? String(e));
+        errorAlert('Verify Failed', e);
       } finally {
         setVerifyLoading(false);
       }
@@ -240,7 +259,7 @@ export function HarnessScreen() {
       setFallbackResult({ otpToken: result.otpToken, channel: result.channel });
       setOtpToken(result.otpToken);
     } catch (e: any) {
-      Alert.alert('Fallback Failed', e.message ?? String(e));
+      errorAlert('Fallback Failed', e);
     } finally {
       setFallbackLoading(false);
     }
@@ -260,7 +279,7 @@ export function HarnessScreen() {
         Alert.alert('OTP Failed', 'Invalid code. Try a non-repeating 6-digit code.');
       }
     } catch (e: any) {
-      Alert.alert('OTP Submit Failed', e.message ?? String(e));
+      errorAlert('OTP Submit Failed', e);
     } finally {
       setOtpLoading(false);
     }

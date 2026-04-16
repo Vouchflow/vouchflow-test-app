@@ -144,11 +144,20 @@ export class RealVouchflowClient implements IVouchflowClient {
         attestationValid: true,
       };
     } catch (e: any) {
-      const code = e.code ?? 'VERIFY_ERROR';
+      const nativeCode: string = e.code ?? 'VERIFY_ERROR';
+      const latencyMs = Date.now() - startTime;
+
+      // BiometricCancelled / BiometricFailed carry the real server session ID in userInfo.
+      // Store it so requestFallback() can use it instead of the synthetic session ID.
+      if (e.userInfo?.sessionId) {
+        this.lastSessionId = e.userInfo.sessionId;
+      }
+
       this.log({ type: 'error', direction: 'in', method: 'POST', endpoint: '/v1/verify',
-        statusCode: code === 'BIOMETRIC_CANCELLED' ? 401 : 500,
-        latencyMs: Date.now() - startTime, error: e.message });
-      const err: SDKError = { code: 401, message: e.message ?? String(e) };
+        statusCode: (nativeCode === 'BIOMETRIC_CANCELLED' || nativeCode === 'BIOMETRIC_FAILED') ? 401 : 500,
+        latencyMs, error: `[${nativeCode}] ${e.message}${e.userInfo?.sessionId ? ` sessionId=${e.userInfo.sessionId}` : ''}` });
+
+      const err: SDKError = { code: nativeCode === 'BIOMETRIC_CANCELLED' ? 401 : 500, message: `[${nativeCode}] ${e.message ?? String(e)}` };
       throw err;
     }
   }
@@ -158,13 +167,17 @@ export class RealVouchflowClient implements IVouchflowClient {
   async requestFallback(sessionId: string, email: string): Promise<FallbackResult> {
     await this.ensureConfigured();
     const startTime = Date.now();
+    // Use the real session ID captured from the last biometric error, not the synthetic one
+    // created by createSession(). BiometricCancelled/BiometricFailed carry the server session ID.
+    const realSessionId = this.lastSessionId ?? sessionId;
     this.log({ type: 'request', direction: 'out', method: 'POST',
-      endpoint: `/v1/verify/${sessionId}/fallback`, request: { email: email.replace(/./g, '*').slice(0, 6) + '...' } });
+      endpoint: `/v1/verify/${realSessionId}/fallback`,
+      request: { email: email.replace(/./g, '*').slice(0, 6) + '...', usingSessionId: realSessionId } });
 
     try {
-      const result = await VouchflowBridge.requestFallback(sessionId, email);
+      const result = await VouchflowBridge.requestFallback(realSessionId, email);
       this.log({ type: 'response', direction: 'in', method: 'POST',
-        endpoint: `/v1/verify/${sessionId}/fallback`,
+        endpoint: `/v1/verify/${realSessionId}/fallback`,
         statusCode: 200, latencyMs: Date.now() - startTime, response: { expiresAt: result.expiresAt } });
       return {
         otpToken: result.fallbackSessionId,
@@ -173,8 +186,8 @@ export class RealVouchflowClient implements IVouchflowClient {
       };
     } catch (e: any) {
       this.log({ type: 'error', direction: 'in', method: 'POST',
-        endpoint: `/v1/verify/${sessionId}/fallback`,
-        statusCode: 500, latencyMs: Date.now() - startTime, error: e.message });
+        endpoint: `/v1/verify/${realSessionId}/fallback`,
+        statusCode: 500, latencyMs: Date.now() - startTime, error: `[${e.code ?? 'FALLBACK_ERROR'}] ${e.message}` });
       const err: SDKError = { code: 500, message: e.message ?? String(e) };
       throw err;
     }
