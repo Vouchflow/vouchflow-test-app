@@ -6,8 +6,7 @@ import type {
   VerificationResult,
   FallbackResult,
   OTPResult,
-  ReputationResult,
-  ReputationSignal,
+  DeviceReputation,
   LogEntry,
   SDKError,
 } from './types';
@@ -30,10 +29,6 @@ function makeDeviceId(): string {
 
 function makeSessionId(): string {
   return 'ses_' + randomHex(8);
-}
-
-function makeChallengeId(): string {
-  return 'chl_' + randomHex(12);
 }
 
 function makeOtpToken(): string {
@@ -63,7 +58,6 @@ interface MockState {
   deviceId: string | null;
   enrolledAt: string | null;
   sessions: Map<string, Session>;
-  graphOptIn: Set<string>;
   requestCount: number;
   tamperFlag: boolean;
 }
@@ -80,7 +74,6 @@ export class MockVouchflowClient implements IVouchflowClient {
       deviceId: null,
       enrolledAt: null,
       sessions: new Map(),
-      graphOptIn: new Set(),
       requestCount: 0,
       tamperFlag: false,
     };
@@ -313,7 +306,7 @@ export class MockVouchflowClient implements IVouchflowClient {
 
     const result: VerificationResult = {
       status: 'verified',
-      challengeId: makeChallengeId(),
+      deviceToken: 'dvt_' + randomHex(16),
       latencyMs: Date.now() - startTime,
       signatureValid: true,
       attestationValid: true,
@@ -368,55 +361,52 @@ export class MockVouchflowClient implements IVouchflowClient {
     return result;
   }
 
-  // ─── Network Graph ─────────────────────────────────────────────────────────
+  // ─── Network graph ─────────────────────────────────────────────────────────
 
   async optInToGraph(namespace: string): Promise<void> {
     const endpoint = `/v1/graph/${namespace}/opt-in`;
     const req = { namespace, deviceId: this.state.deviceId };
     const { startTime } = this.emitRequest('POST', endpoint, req);
     await randomDelay(200, 500);
-
-    this.state.graphOptIn.add(namespace);
     this.emitResponse('POST', endpoint, startTime, 204, req, { optedIn: true, namespace });
   }
 
-  async queryReputation(namespace: string): Promise<ReputationResult> {
-    const endpoint = `/v1/graph/${namespace}/reputation`;
-    const { startTime } = this.emitRequest('GET', endpoint);
-    await randomDelay(400, 900);
+  // ─── Device reputation ─────────────────────────────────────────────────────
 
-    if (!this.state.graphOptIn.has(namespace)) {
-      const err: SDKError = { code: 403, message: `Device not opted in to graph namespace: ${namespace}` };
-      this.emitError('GET', endpoint, startTime, 403, err.message, undefined);
+  async queryReputation(deviceToken: string): Promise<DeviceReputation> {
+    const endpoint = `/v1/device/${deviceToken}/reputation`;
+    const { startTime } = this.emitRequest('GET', endpoint);
+    await randomDelay(300, 700);
+
+    if (!this.state.deviceId) {
+      const err: SDKError = { code: 404, message: 'Device not enrolled' };
+      this.emitError('GET', endpoint, startTime, 404, err.message, undefined);
       throw err;
     }
 
-    const signals: ReputationSignal[] = [
-      { key: 'device_age', label: 'Device Age', score: 85, weight: 0.25, direction: 'positive' },
-      { key: 'session_velocity', label: 'Session Velocity', score: 72, weight: 0.20, direction: 'neutral' },
-      { key: 'geo_consistency', label: 'Geo Consistency', score: 91, weight: 0.20, direction: 'positive' },
-      { key: 'attestation_freshness', label: 'Attestation Freshness', score: 88, weight: 0.15, direction: 'positive' },
-      { key: 'peer_trust', label: 'Peer Trust', score: 65, weight: 0.10, direction: 'neutral' },
-      { key: 'anomaly_score', label: 'Anomaly Score', score: 22, weight: 0.10, direction: 'negative' },
-    ];
+    const ageDays = this.state.enrolledAt
+      ? Math.floor((Date.now() - new Date(this.state.enrolledAt).getTime()) / 86_400_000)
+      : 0;
 
-    // Add some randomness to scores
-    const jittered = signals.map(s => ({
-      ...s,
-      score: Math.min(100, Math.max(0, s.score + Math.floor((Math.random() - 0.5) * 10))),
-    }));
-
-    const overall = Math.round(
-      jittered.reduce((acc, s) => acc + s.score * s.weight, 0) /
-        jittered.reduce((acc, s) => acc + s.weight, 0),
-    );
-
-    const result: ReputationResult = {
-      namespace,
-      overallScore: overall,
-      signals: jittered,
-      peerCount: 1200 + Math.floor(Math.random() * 800),
-      computedAt: isoNow(),
+    const result: DeviceReputation = {
+      device_token: deviceToken,
+      first_seen: this.state.enrolledAt ?? isoNow(),
+      last_seen: isoNow(),
+      total_verifications: 3 + Math.floor(Math.random() * 10),
+      network_verifications: 1 + Math.floor(Math.random() * 5),
+      anomaly_flags: [],
+      risk_score: Math.floor(Math.random() * 15),
+      device_age_days: ageDays,
+      platform: 'android',
+      keychain_persistent: true,
+      network_participant: true,
+      last_verification: {
+        confidence: 'high',
+        context: 'login',
+        completed_at: isoNow(),
+        biometric_used: true,
+        fallback_used: false,
+      },
     };
 
     this.emitResponse('GET', endpoint, startTime, 200, undefined, result);

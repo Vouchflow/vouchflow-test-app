@@ -27,7 +27,7 @@ import { LiveLog } from '../components/LiveLog';
 import { EnvPicker } from '../components/EnvPicker';
 import { OTPInput } from '../components/OTPInput';
 
-import type { Session, ReputationResult } from '../sdk/types';
+import type { Session, DeviceReputation } from '../sdk/types';
 
 export function HarnessScreen() {
   const { entries, log, clear, copyAll } = useLogger();
@@ -36,8 +36,9 @@ export function HarnessScreen() {
 
   // Panel state
   const [activeSession, setActiveSession] = useState<Session | null>(null);
-  const [reputation, setReputation] = useState<ReputationResult | null>(null);
-  const [graphOptedIn, setGraphOptedIn] = useState(false);
+  const [reputation, setReputation] = useState<DeviceReputation | null>(null);
+  const [verifiedDeviceToken, setVerifiedDeviceToken] = useState<string | null>(null);
+  const [graphOptedIn, setGraphOptedIn] = useState(true);
   const [tamperArmed, setTamperArmed] = useState(false);
 
   // Loading states
@@ -50,16 +51,16 @@ export function HarnessScreen() {
   const [fallbackLoading, setFallbackLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [optInLoading, setOptInLoading] = useState(false);
+  const [namespace, setNamespace] = useState(DEBUG_CONFIG.defaultNetworkNamespace);
   const [reputationLoading, setReputationLoading] = useState(false);
   const [hammerLoading, setHammerLoading] = useState(false);
 
   // Input state
   const [userId, setUserId] = useState(DEBUG_CONFIG.defaultUserId);
-  const [namespace, setNamespace] = useState(DEBUG_CONFIG.defaultNetworkNamespace);
   const [fallbackEmail, setFallbackEmail] = useState('');
   const [otpToken, setOtpToken] = useState<string | null>(null);
   const [fallbackResult, setFallbackResult] = useState<{ otpToken: string; channel: string } | null>(null);
-  const [verifyResult, setVerifyResult] = useState<{ status: string; challengeId: string } | null>(null);
+  const [verifyResult, setVerifyResult] = useState<{ status: string; deviceToken: string } | null>(null);
   const [hammerResults, setHammerResults] = useState<Array<{ attempt: number; statusCode: number }> | null>(null);
 
   // ─── Error helper ─────────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ export function HarnessScreen() {
     setDeviceInfo(null);
     setActiveSession(null);
     setReputation(null);
+    setVerifiedDeviceToken(null);
     setGraphOptedIn(false);
     setTamperArmed(false);
     setVerifyResult(null);
@@ -149,6 +151,7 @@ export function HarnessScreen() {
               setDeviceInfo(null);
               setActiveSession(null);
               setReputation(null);
+              setVerifiedDeviceToken(null);
               setGraphOptedIn(false);
             } catch (e: any) {
               Alert.alert('Wipe Failed', e.message ?? String(e));
@@ -251,7 +254,8 @@ export function HarnessScreen() {
               setVerifyLoading(true);
               try {
                 const result = await client.verify(session!.sessionId);
-                setVerifyResult({ status: result.status, challengeId: result.challengeId });
+                setVerifyResult({ status: result.status, deviceToken: result.deviceToken });
+                if (result.deviceToken) setVerifiedDeviceToken(result.deviceToken);
               } catch (e: any) {
                 errorAlert('Verify Failed', e);
               } finally {
@@ -267,7 +271,8 @@ export function HarnessScreen() {
       setVerifyLoading(true);
       try {
         const result = await client.verify(session?.sessionId ?? '');
-        setVerifyResult({ status: result.status, challengeId: result.challengeId });
+        setVerifyResult({ status: result.status, deviceToken: result.deviceToken });
+        if (result.deviceToken) setVerifiedDeviceToken(result.deviceToken);
       } catch (e: any) {
         errorAlert('Verify Failed', e);
       } finally {
@@ -288,7 +293,7 @@ export function HarnessScreen() {
     setFallbackLoading(true);
     setFallbackResult(null);
     try {
-      const result = await client.requestFallback(activeSession.sessionId, email);
+      const result = await client.requestFallback(activeSession?.sessionId ?? '', email);
       setFallbackResult({ otpToken: result.otpToken, channel: result.channel });
       setOtpToken(result.otpToken);
     } catch (e: any) {
@@ -318,7 +323,7 @@ export function HarnessScreen() {
     }
   }
 
-  // ─── Network Graph ────────────────────────────────────────────────────────
+  // ─── Network graph + device reputation ───────────────────────────────────
 
   async function handleOptIn() {
     if (!client) return;
@@ -335,12 +340,17 @@ export function HarnessScreen() {
 
   async function handleQueryReputation() {
     if (!client) return;
+    const token = verifiedDeviceToken;
+    if (!token) {
+      Alert.alert('No Device Token', 'Verify the device first to obtain a device token, then query reputation.');
+      return;
+    }
     setReputationLoading(true);
     try {
-      const result = await client.queryReputation(namespace.trim() || DEBUG_CONFIG.defaultNetworkNamespace);
+      const result = await client.queryReputation(token);
       setReputation(result);
     } catch (e: any) {
-      Alert.alert('Reputation Query Failed', e.message ?? String(e));
+      errorAlert('Reputation Query Failed', e);
     } finally {
       setReputationLoading(false);
     }
@@ -363,6 +373,7 @@ export function HarnessScreen() {
             setDeviceInfo(null);
             setActiveSession(null);
             setReputation(null);
+            setVerifiedDeviceToken(null);
             setGraphOptedIn(false);
           },
         },
@@ -625,7 +636,7 @@ export function HarnessScreen() {
                 <Text style={styles.infoLabel}>RESULT</Text>
                 <StatusBadge status={verifyResult.status} />
               </View>
-              <Row label="Challenge ID" value={verifyResult.challengeId} mono />
+              <Row label="Device Token" value={verifyResult.deviceToken} mono />
             </View>
           ) : null}
 
@@ -674,46 +685,54 @@ export function HarnessScreen() {
               loading={reputationLoading}
               variant="secondary"
               size="sm"
-              disabled={!graphOptedIn}
+              disabled={!graphOptedIn || !verifiedDeviceToken}
             />
           </View>
 
           {!graphOptedIn && (
             <Text style={styles.hint}>Opt in to the namespace before querying reputation.</Text>
           )}
+          {graphOptedIn && !verifiedDeviceToken && (
+            <Text style={styles.hint}>Verify the device first to obtain a device token.</Text>
+          )}
+          {graphOptedIn && verifiedDeviceToken && !reputation && (
+            <Text style={styles.hint}>Ready. Tap Query Reputation to fetch from server.</Text>
+          )}
 
           {reputation ? (
             <View style={styles.infoBlock}>
-              <Row label="Namespace" value={reputation.namespace} mono />
-              <Row label="Peers" value={String(reputation.peerCount)} />
-              <Row label="Computed" value={new Date(reputation.computedAt).toLocaleTimeString()} mono />
+              <Row label="Device Token" value={reputation.device_token} mono />
+              <Row label="Platform" value={reputation.platform} />
+              <Row label="Age (days)" value={String(reputation.device_age_days)} />
+              <Row label="First Seen" value={new Date(reputation.first_seen).toLocaleDateString()} mono />
+              <Row label="Last Seen" value={new Date(reputation.last_seen).toLocaleTimeString()} mono />
+              <Row label="Total Verifications" value={String(reputation.total_verifications)} />
+              <Row label="Network Verifications" value={String(reputation.network_verifications)} />
+              <Row label="Network Participant" value={reputation.network_participant ? 'Yes' : 'No'} />
+              <Row label="Keychain Persistent" value={reputation.keychain_persistent ? 'Yes' : 'No'} />
 
-              <Text style={styles.subSection}>OVERALL SCORE</Text>
-              {renderScoreBar(reputation.overallScore)}
+              <Text style={styles.subSection}>RISK SCORE</Text>
+              {renderScoreBar(reputation.risk_score)}
 
-              <Text style={styles.subSection}>SIGNALS</Text>
-              {reputation.signals.map(signal => (
-                <View key={signal.key} style={styles.signalRow}>
-                  <Text style={styles.signalLabel}>{signal.label}</Text>
-                  <View style={styles.signalBar}>
-                    <View
-                      style={[
-                        styles.signalFill,
-                        {
-                          width: `${signal.score}%`,
-                          backgroundColor:
-                            signal.direction === 'positive'
-                              ? colors.status.verified
-                              : signal.direction === 'negative'
-                                ? colors.status.failed
-                                : colors.status.pending,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.signalScore}>{signal.score}</Text>
-                </View>
-              ))}
+              {reputation.anomaly_flags.length > 0 && (
+                <>
+                  <Text style={styles.subSection}>ANOMALY FLAGS</Text>
+                  {reputation.anomaly_flags.map(flag => (
+                    <Text key={flag} style={[styles.hint, { color: colors.status.failed }]}>{flag}</Text>
+                  ))}
+                </>
+              )}
+
+              {reputation.last_verification && (
+                <>
+                  <Text style={styles.subSection}>LAST VERIFICATION</Text>
+                  <Row label="Confidence" value={reputation.last_verification.confidence.toUpperCase()} />
+                  <Row label="Context" value={reputation.last_verification.context} />
+                  <Row label="Completed" value={new Date(reputation.last_verification.completed_at).toLocaleTimeString()} mono />
+                  <Row label="Biometric" value={reputation.last_verification.biometric_used ? 'Yes' : 'No'} />
+                  <Row label="Fallback" value={reputation.last_verification.fallback_used ? 'Yes' : 'No'} />
+                </>
+              )}
             </View>
           ) : null}
         </PanelBlock>
@@ -722,6 +741,7 @@ export function HarnessScreen() {
         <PanelBlock title="EDGE CASES" index={5} defaultExpanded={false}>
           <Text style={styles.edgeNote}>
             These controls simulate error conditions and stress scenarios.
+            {!useMock ? ' Enable Mock mode to use them.' : ''}
           </Text>
 
           <View style={styles.edgeGrid}>
@@ -730,19 +750,21 @@ export function HarnessScreen() {
               onPress={handleSimulateReinstall}
               variant="danger"
               size="sm"
+              disabled={!useMock}
             />
             <ActionButton
               label={tamperArmed ? 'Tamper ARMED' : 'Arm Tamper'}
               onPress={handleTamperToggle}
               variant={tamperArmed ? 'danger' : 'secondary'}
               size="sm"
+              disabled={!useMock}
             />
             <ActionButton
               label="Force Expire Session"
               onPress={handleForceExpire}
               variant="danger"
               size="sm"
-              disabled={!activeSession || activeSession.status === 'EXPIRED'}
+              disabled={!useMock || !activeSession || activeSession.status === 'EXPIRED'}
             />
             <ActionButton
               label="Hammer Rate Limit (15x)"
@@ -750,6 +772,7 @@ export function HarnessScreen() {
               loading={hammerLoading}
               variant="secondary"
               size="sm"
+              disabled={!useMock}
             />
           </View>
 

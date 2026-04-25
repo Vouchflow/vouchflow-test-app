@@ -4,7 +4,7 @@ import type {
   VerificationResult,
   FallbackResult,
   OTPResult,
-  ReputationResult,
+  DeviceReputation,
   LogEntry,
   SDKError,
 } from './types';
@@ -39,7 +39,8 @@ export interface IVouchflowClient {
 
   // Network graph
   optInToGraph(namespace: string): Promise<void>;
-  queryReputation(namespace: string): Promise<ReputationResult>;
+  // Device reputation — calls GET /v1/device/:token/reputation (server-side, read-scoped key)
+  queryReputation(deviceToken: string): Promise<DeviceReputation>;
 
   // Debug / test controls (mock only)
   tamperNextSignature?: () => void;

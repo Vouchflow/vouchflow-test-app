@@ -37,7 +37,7 @@ export interface Session {
 
 export interface VerificationResult {
   status: VerificationStatus;
-  challengeId: string;
+  deviceToken: string;
   latencyMs: number;
   signatureValid: boolean;
   attestationValid: boolean;
@@ -54,22 +54,29 @@ export interface OTPResult {
   sessionId?: string;
 }
 
-// ─── Network Graph ──────────────────────────────────────────────────────────
+// ─── Device reputation (GET /v1/device/:token/reputation) ───────────────────
 
-export interface ReputationSignal {
-  key: string;
-  label: string;
-  score: number;          // 0-100
-  weight: number;         // 0-1
-  direction: 'positive' | 'negative' | 'neutral';
+export interface LastVerification {
+  confidence: 'high' | 'medium' | 'low';
+  context: string;
+  completed_at: string;
+  biometric_used: boolean;
+  fallback_used: boolean;
 }
 
-export interface ReputationResult {
-  namespace: string;
-  overallScore: number;   // 0-100
-  signals: ReputationSignal[];
-  peerCount: number;
-  computedAt: string;
+export interface DeviceReputation {
+  device_token: string;
+  first_seen: string;
+  last_seen: string;
+  total_verifications: number;
+  network_verifications: number;
+  anomaly_flags: string[];
+  risk_score: number;
+  device_age_days: number;
+  platform: string;
+  keychain_persistent: boolean;
+  network_participant: boolean;
+  last_verification: LastVerification | null;
 }
 
 // ─── Log entries ─────────────────────────────────────────────────────────────

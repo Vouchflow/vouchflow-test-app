@@ -88,12 +88,18 @@ index.js
 
 ## Environment configuration
 
-Edit `src/config/debug.config.ts` or set environment variables:
+All environment settings live in `src/config/debug.config.ts`. No external environment variables are needed — sandbox keys are hardcoded there for convenience.
 
-| Variable | Description |
+| Setting | Description |
 |---|---|
-| `VOUCHFLOW_STAGING_KEY` | API key for staging environment |
-| `VOUCHFLOW_PROD_KEY` | API key for production environment |
+| `ENVIRONMENTS.sandbox.writeKey` | Sandbox write key (`vsk_sandbox_...`) — pre-filled |
+| `ENVIRONMENTS.sandbox.readKey` | Sandbox read key (`vsk_sandbox_read_...`) — pre-filled |
+| `ENVIRONMENTS.production.writeKey` | Production write key — fill in before live testing |
+| `ENVIRONMENTS.production.readKey` | Production read key — fill in before live testing |
+| `DEBUG_CONFIG.defaultEnv` | Active environment (`sandbox` or `production`) |
+| `DEBUG_CONFIG.useMockSDK` | `true` = in-memory mock, `false` = real SDK |
+
+No `customerId` is needed — the customer account is identified server-side from the API key.
 
 ## Swapping in the real SDK
 

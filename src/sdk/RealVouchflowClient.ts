@@ -6,7 +6,7 @@ import type {
   VerificationResult,
   FallbackResult,
   OTPResult,
-  ReputationResult,
+  DeviceReputation,
   LogEntry,
   SDKError,
 } from './types';
@@ -32,6 +32,7 @@ function isoNow(): string {
 export class RealVouchflowClient implements IVouchflowClient {
   private config: VouchflowClientConfig;
   private configured = false;
+  private lastSessionId: string | null = null;
 
   constructor(config: VouchflowClientConfig) {
     this.config = config;
@@ -141,7 +142,7 @@ export class RealVouchflowClient implements IVouchflowClient {
         statusCode: 200, latencyMs, response: result });
       return {
         status: result.verified ? 'verified' : 'failed',
-        challengeId: result.deviceToken ?? 'real_challenge',
+        deviceToken: result.deviceToken ?? '',
         latencyMs,
         signatureValid: result.verified,
         attestationValid: true,
@@ -221,16 +222,57 @@ export class RealVouchflowClient implements IVouchflowClient {
     }
   }
 
-  // ── Network Graph ────────────────────────────────────────────────────────────
+  // ── Network graph ────────────────────────────────────────────────────────────
   // Not available via the current SDK bridge — log and no-op.
 
   async optInToGraph(namespace: string): Promise<void> {
     this.log({ type: 'info', direction: 'event', method: 'SDK', endpoint: '/internal/graph',
-      response: { note: 'Network graph not available in current bridge', namespace } });
+      response: { note: 'Network graph opt-in is a customer account setting, not a per-device call', namespace } });
   }
 
-  async queryReputation(_namespace: string): Promise<ReputationResult> {
-    const err: SDKError = { code: 501, message: 'Network graph not available in real SDK bridge' };
-    throw err;
+  // ── Device reputation ─────────────────────────────────────────────────────
+  // Calls GET /v1/device/:token/reputation with the read-scoped key.
+  // This is a server-side API call — never done in production mobile apps.
+  // The test harness calls it here to exercise the full trust verification pattern.
+
+  async queryReputation(deviceToken: string): Promise<DeviceReputation> {
+    const { readKey, baseUrl } = this.config;
+    if (!readKey || !readKey.startsWith('vsk_')) {
+      const err: SDKError = { code: 400, message: 'Read key is required for reputation queries. Enter it in the API CONFIG section.' };
+      throw err;
+    }
+    const endpoint = `/v1/device/${deviceToken}/reputation`;
+    const startTime = Date.now();
+    this.log({ type: 'request', direction: 'out', method: 'GET', endpoint,
+      request: { note: 'Server-side reputation query (read-scoped key)' } });
+
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${readKey}`,
+          'Vouchflow-API-Version': '2026-04-01',
+        },
+      });
+      const latencyMs = Date.now() - startTime;
+      const body = await response.json();
+
+      if (!response.ok) {
+        this.log({ type: 'error', direction: 'in', method: 'GET', endpoint,
+          statusCode: response.status, latencyMs, error: body?.error?.message ?? `HTTP ${response.status}` });
+        const err: SDKError = { code: response.status, message: body?.error?.message ?? `HTTP ${response.status}` };
+        throw err;
+      }
+
+      this.log({ type: 'response', direction: 'in', method: 'GET', endpoint,
+        statusCode: 200, latencyMs, response: body });
+      return body as DeviceReputation;
+    } catch (e: any) {
+      if (e.code !== undefined) throw e;
+      this.log({ type: 'error', direction: 'in', method: 'GET', endpoint,
+        latencyMs: Date.now() - startTime, error: e.message ?? String(e) });
+      const err: SDKError = { code: 500, message: e.message ?? String(e) };
+      throw err;
+    }
   }
 }
