@@ -139,9 +139,15 @@ Transitive dependencies are declared in the published POM and resolved automatic
 
 ### iOS
 
-> ⚠️ The iOS native bridge has not been implemented yet. The `RealVouchflowClient` currently routes all calls through `VouchflowBridge` (the Android bridge name). An iOS-specific Swift bridge module is needed before the real SDK can be used on iOS.
+The iOS native bridge (`VouchflowBridgeModule.swift`) does not exist yet. The test app is React Native — Swift packages cannot be imported directly from TypeScript. A small Swift native module is needed to sit between the JS layer and the `VouchflowSDK` Swift package, the same way `VouchflowBridgeModule.kt` does on Android.
 
-When the iOS bridge is ready, add the SDK via Xcode: **File → Add Package Dependencies**, enter `https://github.com/vouchflow/ios-sdk`, and pin to the latest release tag.
+Once the bridge is written:
+
+**1.** In Xcode: **File → Add Package Dependencies**, enter `https://github.com/vouchflow/ios-sdk`, pin to the latest release tag, and add `VouchflowSDK` to the `VouchflowTestApp` target.
+
+**2.** Create `ios/VouchflowTestApp/VouchflowBridgeModule.swift` and `VouchflowBridgeModule.m` implementing the same interface that `VouchflowBridgeModule.kt` exposes on Android (`configure`, `verify`, `requestFallback`, `submitFallbackOtp`, `reset`).
+
+**3.** Run `bundle exec pod install` from `ios/`.
 
 ## Mock SDK behavior
 
