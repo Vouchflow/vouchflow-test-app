@@ -117,10 +117,11 @@ dependencies {
         implementation jscFlavor
     }
 
-    // Vouchflow SDK (local AAR)
+    // Vouchflow SDK
+    // Once published to Maven Central (push a v* tag to android-sdk), replace with:
+    //   implementation("com.vouchflow:android-sdk:1.0.0")
+    // The published artifact's POM handles transitive deps automatically.
     implementation(files('libs/vouchflow-sdk.aar'))
-
-    // Transitive dependencies required by the Vouchflow SDK
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
