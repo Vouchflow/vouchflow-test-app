@@ -82,8 +82,8 @@ android {
         applicationId "dev.vouchflowtestapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
     }
     signingConfigs {
         debug {
@@ -117,17 +117,6 @@ dependencies {
         implementation jscFlavor
     }
 
-    // Vouchflow SDK
-    // Once published to Maven Central (push a v* tag to android-sdk), replace with:
-    //   implementation("dev.vouchflow:android-sdk:1.0.0")
-    // The published artifact's POM handles transitive deps automatically.
-    implementation(files('libs/vouchflow-sdk.aar'))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("com.google.android.play:integrity:1.4.0")
-    implementation("androidx.biometric:biometric:1.2.0-alpha05")
-    implementation("androidx.activity:activity-ktx:1.8.2")
-    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    // Vouchflow SDK (Maven Central)
+    implementation("dev.vouchflow:android-sdk:latest.release")
 }
