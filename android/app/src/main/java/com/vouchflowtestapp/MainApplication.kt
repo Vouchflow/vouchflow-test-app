@@ -1,4 +1,4 @@
-package com.vouchflowtestapp
+package dev.vouchflowtestapp
 
 import android.app.Application
 import com.facebook.react.PackageList
