@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.vouchflowtestapp"
+    namespace "dev.vouchflowtestapp"
     defaultConfig {
-        applicationId "com.vouchflowtestapp"
+        applicationId "dev.vouchflowtestapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -119,7 +119,7 @@ dependencies {
 
     // Vouchflow SDK
     // Once published to Maven Central (push a v* tag to android-sdk), replace with:
-    //   implementation("com.vouchflow:android-sdk:1.0.0")
+    //   implementation("dev.vouchflow:android-sdk:1.0.0")
     // The published artifact's POM handles transitive deps automatically.
     implementation(files('libs/vouchflow-sdk.aar'))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")

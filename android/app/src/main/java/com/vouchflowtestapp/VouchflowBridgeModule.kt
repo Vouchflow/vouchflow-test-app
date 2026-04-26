@@ -1,8 +1,8 @@
-package com.vouchflowtestapp
+package dev.vouchflowtestapp
 
 import androidx.fragment.app.FragmentActivity
 import com.facebook.react.bridge.*
-import com.vouchflow.sdk.*
+import dev.vouchflow.sdk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

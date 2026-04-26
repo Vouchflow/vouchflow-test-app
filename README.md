@@ -130,7 +130,7 @@ With:
 
 ```groovy
 // Vouchflow SDK (Maven Central)
-implementation("com.vouchflow:android-sdk:1.0.0")
+implementation("dev.vouchflow:android-sdk:1.0.0")
 ```
 
 Transitive dependencies are declared in the published POM and resolved automatically.
