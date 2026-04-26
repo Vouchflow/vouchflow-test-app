@@ -103,9 +103,45 @@ No `customerId` is needed — the customer account is identified server-side fro
 
 ## Swapping in the real SDK
 
-1. Set `useMockSDK: false` in `src/config/debug.config.ts`
-2. Implement `IVouchflowClient` (from `src/sdk/VouchflowClient.ts`) with the real SDK
-3. Instantiate it in `src/hooks/useSDKClient.ts` in the `else` branch
+Set `useMockSDK: false` in `src/config/debug.config.ts` to route all calls through the real native SDKs.
+
+### Android
+
+The Android native bridge (`VouchflowBridgeModule.kt`) is already wired up. The SDK is currently included as a local AAR for development. To switch to the published Maven Central artifact once the first release is tagged:
+
+**1.** In `android/app/build.gradle`, replace:
+
+```groovy
+// Vouchflow SDK (local AAR)
+implementation(files('libs/vouchflow-sdk.aar'))
+
+// Transitive dependencies required by the Vouchflow SDK
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+implementation("com.squareup.okhttp3:okhttp:4.12.0")
+implementation("com.google.code.gson:gson:2.10.1")
+implementation("com.google.android.play:integrity:1.4.0")
+implementation("androidx.biometric:biometric:1.2.0-alpha05")
+implementation("androidx.activity:activity-ktx:1.8.2")
+implementation("androidx.lifecycle:lifecycle-process:2.7.0")
+implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+```
+
+With:
+
+```groovy
+// Vouchflow SDK (Maven Central)
+implementation("com.vouchflow:android-sdk:1.0.0")
+```
+
+Transitive dependencies are declared in the published POM and resolved automatically.
+
+**2.** Sync Gradle.
+
+### iOS
+
+> ⚠️ The iOS native bridge has not been implemented yet. The `RealVouchflowClient` currently routes all calls through `VouchflowBridge` (the Android bridge name). An iOS-specific Swift bridge module is needed before the real SDK can be used on iOS.
+
+When the iOS bridge is ready, add the SDK via Xcode: **File → Add Package Dependencies**, enter `https://github.com/vouchflow/ios-sdk`, and pin to the latest release tag.
 
 ## Mock SDK behavior
 
